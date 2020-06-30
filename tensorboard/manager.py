@@ -400,7 +400,7 @@ def start(arguments, timeout=datetime.timedelta(seconds=60)):
             configure_kwargs={},
         ),
     )
-    if match:
+    if match and not os.environ.get("TENSORBOARD_NO_PROCESS_REUSE"):
         return StartReused(info=match)
 
     (stdout_fd, stdout_path) = tempfile.mkstemp(prefix=".tensorboard-stdout-")
