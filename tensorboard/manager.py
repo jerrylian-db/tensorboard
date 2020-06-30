@@ -393,15 +393,16 @@ def start(arguments, timeout=datetime.timedelta(seconds=60)):
       A `StartReused`, `StartLaunched`, `StartFailed`, or `StartTimedOut`
       object.
     """
-    match = _find_matching_instance(
-        cache_key(
-            working_directory=os.getcwd(),
-            arguments=arguments,
-            configure_kwargs={},
-        ),
-    )
-    if match and not os.environ.get("TENSORBOARD_NO_PROCESS_REUSE"):
-        return StartReused(info=match)
+    if not os.environ.get("TENSORBOARD_NO_PROCESS_REUSE"):
+        match = _find_matching_instance(
+            cache_key(
+                working_directory=os.getcwd(),
+                arguments=arguments,
+                configure_kwargs={},
+            ),
+        )
+        if match:
+            return StartReused(info=match)
 
     (stdout_fd, stdout_path) = tempfile.mkstemp(prefix=".tensorboard-stdout-")
     (stderr_fd, stderr_path) = tempfile.mkstemp(prefix=".tensorboard-stderr-")
