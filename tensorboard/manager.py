@@ -27,6 +27,8 @@ import os
 import subprocess
 import tempfile
 import time
+import ctypes
+import signal
 
 import six
 
@@ -367,6 +369,19 @@ StartExecFailed = collections.namedtuple(
 StartTimedOut = collections.namedtuple("StartTimedOut", ("pid",))
 
 
+def sigterm_on_parent_death():
+    """
+        Uses prctl to automatically send SIGTERM to the command process when its parent is dead.
+        This is a no-op on macOS because prctl is not supported.
+    """
+    try:
+        libc = ctypes.CDLL("libc.so.6")
+        # Set the parent process death signal of the command process to SIGTERM.
+        libc.prctl(1, signal.SIGTERM)  # PR_SET_PDEATHSIG, see prctl.h
+    except OSError:
+        pass
+
+
 def start(arguments, timeout=datetime.timedelta(seconds=60)):
     """Start a new TensorBoard instance, or reuse a compatible one.
 
@@ -412,6 +427,7 @@ def start(arguments, timeout=datetime.timedelta(seconds=60)):
             ["tensorboard" if explicit_tb is None else explicit_tb] + arguments,
             stdout=stdout_fd,
             stderr=stderr_fd,
+            preexec_fn=sigterm_on_parent_death,
         )
     except OSError as e:
         return StartExecFailed(os_error=e, explicit_binary=explicit_tb)
